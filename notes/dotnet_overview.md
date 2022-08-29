@@ -761,15 +761,317 @@
 
 ---
 
-### #25
+### #25 Выражения LINQ
+
+Поступило задание добавить в данный класс некий новый метод, который расширяет функциональность данного класса. Давайте подумаем какие возможности у нас есть.
+
+1. мы можем попробовать наследовать данный класс и в классе-наследнике сделать имплементацию метода, который необходим нашим пользователям;
+2. мы можем использовать композицию и шаблон проектирования «Декоратор», чтобы добавить интересующий нас метод.
+
+К сожалению, ни один из предложенных методов не является идеальным.
+
+Однако в языке программирования C# можно использовать такую функциональность, как **методы расширения** или **Extension Methods**. Если коротко, то методы расширения позволяют нам добавить функциональность к типам, значимым и ссылочным, не изменяя код этих типов, не прибегая к наследованию и композиции, не использую шаблоны проектирования.
+
+```C#
+namespace XYZ
+{
+    static class StringExtensions
+    {
+        public static IEnumerable<char> ToCharEnumerable(this String @string)
+        {
+            var result = new List<char>();
+            for (int i = 0; i < @string.Length; i++)
+                result.Add(@string[i]);
+            return result;
+        }
+    }
+}
+```
+
+Давайте подумаем, что необходимо сделать чтобы создать класс:
+
+- определить публичные и приватные поля и свойства;
+- переопределить метод ToString() – для удобства логирования;
+- переопределить методы GetHashCode() / Equals() – для сравнения объектов на основании значений их свойств, а не ссылок на определенное место в памяти;
+
+**создание анонимных типов**
+
+```C#
+ double min = 0.5;
+     double max = 1.44;
+     string description = "Some description";
+ var anonymous = new { Min = min, Max = max, Description = description };
+```
+
+Как и любой другой тип в языке C# анонимный тип наследует тип System.Object, то есть в нашем анонимном типе доступны стандартные 4 метода: **ToString()**, **GetHashCode()**, **Equals()**, **GetType()**. Рассмотрим каждый из этих методов анонимного типа:
+
+- **ToString()** выведет на экран следующую строку: { Min = 0,5, Max = 1,44, Description = Some description } – как видите метод ToString() выводит на экран строку, которая содержит названия свойств и их значения без дополнительного переопределения данного метода;
+- **GetHashCode()** – данный метод рассчитывает хэш код на основании названий свойств и их значений, то есть можно сделать вывод, что для двух анонимных типов с одинаковыми свойствами и одинаковыми значениями свойств будут возвращены одинаковые хэш коды.
+- **Equals()** – данный метод вернет значение True для двух анонимных типов с одинаковыми свойствами и одинаковыми значениями. Метод Equals анонимного типа основан на значениях и названиях свойств, однако оператор равенства «==» будет сравнивать ссылки и если объекты анонимного типа хранятся под разными адресами в памяти результат сравнения будет false, несмотря на равенство значений и названий свойств.
+- **GetType()** вернёт некую строку похожую на «f__AnonymousType0 3[System.Double,System.Double,System.String]». Стоит сказать, что у нас не будет доступа к названию анонимного типа и название которое мы получили при помощи метода GetType() автоматически сгенерировано компилятором. В любом случае название анонимного типа не влияет на нашу работу и как оно выглядит не должно нас волновать. Важно только сказать, что если бы создали еще один анонимный тип используя следующую строчку кода
+
+```
+var anonymous2 = new { Min = 2.0, Max = 10.5, Description = “description” };
+```
+
+то компилятор не создал бы новый анонимный тип а использовал существующий тип, так как тип переменной anonymous2 содержит тот же набор свойств (названия и типы), как и созданная ранее переменная anonymous.
+
+**выражения лямбда**
+
+    **Аргументы для обработки => Операции над аргументами**
+
+```
+i => i > 0;
+```
+
+```
+(int x, int y) => {
+var result = x + y;
+ Console.WriteLine($“Result is {result}”);
+ return result;
+}
+```
+
+**LINQ**
+
+То есть «язык интегрированных запросов» - можно сказать, что это некий <mark>язык</mark>, который интегрирован в язык C# и который <mark>позволяет получать</mark> и модифицировать <mark>данные из различных источников</mark> <mark>стандартным образом</mark> независимо от физического характера источника данных.
+
+Возникает резонный вопрос, функциональность каких типов мы расширяем? Ответ на этот вопрос, следующий: всех типов, которые имплементируют интерфейс IEnumerable, то есть все типы, которые можно перечислять: массивы, списки, словари, различные коллекции.
+
+Следует также помнить, что **методы <mark>LINQ выполняются отложенным</mark> выполнением**, то есть выражение orderedEven <mark>содержит выражение LINQ</mark>, а <mark>не результат</mark> его <mark>выполнения</mark>.
+
+
+
+интерфейс **IEnumerable** или **IQueryable**
+
+- если вы ожидаете результат вашего запроса как IQueryable, то логика вашего запроса будет выполнена в базе данных (LINQ-to-SQL) и вы получите уже готовый результат из базы.
+- если вы ожидаете результат вашего запроса как IEnumerable, то логика вашего запроса будет выполнена в коде (LINQ-to-objects): сначала вы получите все данные из базы, а потом отфильтруете нужные вам данные в коде и получите готовый результат.
+
+По факту разница сводится к тому, где вы хотели бы выполнить логику вашего запроса – в базе (IQueryable) или в коде (IEnumerable). Вы можете явно это указать используя методы LINQ **AsQueryable()** и **AsEnumerable()**.
+
+
+
+```
+class Statistic
+    {
+        public string Name { get; set; }
+        public double Avg { get; set; }
+        public double Min { get; set; }
+        public double Max { get; set; }
+    }
+
+var list = new List<Statistic>(new[] {
+                new Statistic(){
+                    Name="Test A",
+                    Avg = 23.4,
+                    Min = 11.3,
+                    Max = 25.6
+                },
+                new Statistic(){
+                    Name="Test B",
+                    Avg = 22.4,
+                    Min = 9.3,
+                    Max = 27.6
+                }});
+
+var maxData = list.Select(s => new {s.Name, s.Max });
+```
 
 ---
 
-### #26
+### #26  Продвинутые функции языка C#
+
+- использованием индексов
+- переопределением операторов
+- продвинутой конверсией типов
+
+```
+class Program
+    {
+        static void Main(string[] args)
+        {
+            Console.WriteLine("ПРИМЕР 1. Индексы.");
+
+            var x = new NamedValue("X", 2.54M);
+            var y = new NamedValue("Y", 3.46M);
+            var z = new NamedValue("Z", 3.46M);
+
+            var data = new[] { x, y };
+
+            var typeWithIndex = new TypeWithIndex(data);
+
+
+            Console.WriteLine("\nИспользование индекса по свойству Name.");
+            Console.WriteLine(typeWithIndex["X"]); // 2.54
+            Console.WriteLine(typeWithIndex["Y"]); // 3.46
+            Console.WriteLine(typeWithIndex["Z"]); // 0
+
+            Console.WriteLine("\nИспользование индекса по свойству Value.");
+            Console.WriteLine(typeWithIndex[2.54M]); // X
+            Console.WriteLine(typeWithIndex[3.46M]); // Y
+            Console.WriteLine(typeWithIndex[0M]); // Z
+
+            Console.WriteLine("\nИспользование метода поиска по свойству Name.");
+            Console.WriteLine(typeWithIndex.GetByName("X")); // 2.54
+            Console.WriteLine(typeWithIndex.GetByName("Y")); // 3.46
+            Console.WriteLine(typeWithIndex.GetByName("Z")); // 0
+
+            Console.WriteLine("\nИспользование метода поиска по свойству Value.");
+            Console.WriteLine(typeWithIndex.GetByValue(2.54M)); // X
+            Console.WriteLine(typeWithIndex.GetByValue(3.46M)); // Y
+            Console.WriteLine(typeWithIndex.GetByValue(0M)); // Z
+
+
+            Console.ReadKey();
+        }
+    }
+
+internal class NamedValue
+    {
+        public NamedValue(string name, decimal value)
+        {
+            Name = name;
+            Value = value;
+        }
+
+        public string Name { get; set; }
+
+        public decimal Value { get; set; }
+
+
+        public static NamedValue operator +(NamedValue x, NamedValue y) => new NamedValue($"{x.Name} + {y.Name}", x.Value + y.Value);
+
+        public static NamedValue operator -(NamedValue x, NamedValue y) => new NamedValue($"{x.Name} - {y.Name}", x.Value - y.Value);
+
+        public static NamedValue operator *(NamedValue x, NamedValue y) => new NamedValue($"{x.Name} * {y.Name}", x.Value * y.Value);
+
+        public static NamedValue operator /(NamedValue x, NamedValue y) => new NamedValue($"{x.Name} / {y.Name}", x.Value / y.Value);
+
+        public static bool operator ==(NamedValue x, NamedValue y) => x.Value == y.Value;
+
+        public static bool operator !=(NamedValue x, NamedValue y) => x.Value != y.Value;
+
+        public static bool operator <(NamedValue x, NamedValue y) => x.Value < y.Value;
+
+        public static bool operator >(NamedValue x, NamedValue y) => x.Value > y.Value;
+
+        public static bool operator <=(NamedValue x, NamedValue y) => x.Value <= y.Value;
+
+        public static bool operator >=(NamedValue x, NamedValue y) => x.Value >= y.Value;
+
+        public override string ToString() => $"{Name} = {Value}";
+
+        public override int GetHashCode() => ToString().GetHashCode();
+
+        public override bool Equals(object obj) => ToString().GetHashCode() == obj.GetHashCode();
+    }
+
+class TypeWithIndex : ITypeWithIndex
+    {
+        private readonly IEnumerable<NamedValue> _internalCollection;
+
+        public TypeWithIndex(IEnumerable<NamedValue> data)
+        {
+            _internalCollection = data;
+        }
+
+        public decimal this[string index]
+        {
+            get => _internalCollection.FirstOrDefault(i => i.Name == index)?.Value ?? 0M;
+        }
+
+        public string this[decimal index]
+        {
+            get => _internalCollection.FirstOrDefault(i => i.Value == index)?.Name ?? "[EMPTY]";
+        }
+
+        public decimal GetByName(string name) => _internalCollection.FirstOrDefault(i => i.Name == name)?.Value ?? 0M;
+
+        public string GetByValue(decimal value) => _internalCollection.FirstOrDefault(i => i.Value == value)?.Name ?? "[EMPTY]";
+    }
+
+interface ITypeWithIndex
+    {
+        decimal this[string index] { get; }
+
+        string this[decimal index] { get; }
+
+        decimal GetByName(string name);
+
+        string GetByValue(decimal value);
+    }
+```
+
+```
+var a = new SomeClassA();
+var b = (SomeClassB) a;
+class SomeClassA { }
+class SomeClassB { }
+```
+
+```
+class Program
+    {
+        static void Main(string[] args)
+        {
+
+            Console.WriteLine("\nПРИМЕР 3. Конверсия типов.");
+
+            var mobile = new Mobile(5.2M, "Apple IOS");
+            Console.WriteLine();
+            Console.WriteLine(mobile);
+            Console.WriteLine("Конверсия...");
+            var tablet = (Tablet)mobile;
+            Console.WriteLine(tablet);           
+
+            Console.ReadKey();
+        }
+    }
+
+class Mobile
+    {
+        public Mobile(decimal size, string operatingSystem)
+        {
+            DisplaySize = size;
+            OperatingSystem = operatingSystem;
+        }
+
+        public decimal DisplaySize { get; }
+
+        public string OperatingSystem { get; }
+
+        public override string ToString() => $"Mobile => {DisplaySize}'', {OperatingSystem}";
+    }
+
+class Tablet
+    {
+        public Tablet(decimal size, string operatingSystem, bool supportsGsm)
+        {
+            DisplaySize = size;
+            OperatingSystem = operatingSystem;
+            SupportsGsm = supportsGsm;
+        }
+
+        public decimal DisplaySize { get; }
+
+        public string OperatingSystem { get; }
+
+        public bool SupportsGsm { get; }
+
+        public override string ToString() => $"Tablet => {DisplaySize}'', {OperatingSystem}, GSM: {SupportsGsm}";
+
+        public static explicit operator Tablet(Mobile mobile)
+        {
+            return new Tablet(mobile.DisplaySize * 2, mobile.OperatingSystem, true);
+        }
+    }
+```
+
+
 
 ---
 
-### #27
+### #27 Тип string в языке C#
 
 ---
 
