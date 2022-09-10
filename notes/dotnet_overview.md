@@ -1344,14 +1344,105 @@ var result = obj.Sum(2,3); // result будет равно 5.
 
 ---
 
-### #34
+### #34 Порядок инициализации
+
+- Derived.Static.Fields
+
+- Derived.Static.Constructor
+
+- Derived.Instance.Fields
+
+- Base.Static.Fields
+
+- Base.Static.Constructor
+
+- Base.Instance.Fields
+
+- Base.Instance.Constructor
+
+- Derived.Instance.Constructor
 
 ---
 
-### #35
+### #35 ООП
+
+- Абстракция - отделение идеи от реализации
+
+- Полиморфизм - реализация идеи разными способами
+
+- Наследование - повторное использование кода лучше реализовать с помощью агрегации или, что хуже, композиции)
+
+- Инкапсуляция - приватные методы
 
 ---
 
-### #36
+### #36 SOLID
+
+- Single responsibility - объект, метод должны заниматься только одним своим делом, в противоположность антипатерну God-object
+
+- Open closed principle - для добавления новых функций не должно требоваться изменять существующий код
+
+- Liskov substitution - использовать базовый класс не зная о реализации наследника
+
+- Interface segregation principle - не раздувать интерфейсы
+
+- Dependency inversion principle - вначале интерфейсы, потом реализация, но не наоборот
+
+---
+
+## #37 Ковариантность
+
+- List<> инвариантен -> можно привести к переменной только того же типа  
+  public class List<T>
+
+- IEnumerable<> ковариантен -> часное можно привести к более общему  
+  interface IEnumerable<out T> - указан out
+
+- Action<> контрвариантен -> общее можно привести к частному (пример ниже)  
+  delegate void Action<in T> - указан in
+
+Термин встречается только при обсуждении generic-ов.
+
+``` C#
+interface IAnimal { } class Cat : IAnimal { public void Meow() { }
+} class Dog : IAnimal { public void Woof() { }
+} // НЕ КОМПИЛИРУЕТСЯ, List<> - инвариантен // не компилируется, потому что у List есть метод Add, // который приводит к коллизиям (пример коллизии см. ниже) List<IAnimal> animals = new List<Cat>(); // компилируется, IEnumerable<> - ковариантен // у IEnumerable нет методов приводящих к коллизиям IEnumerable<IAnimal> lst = new List<Cat>(); // компилируется, Action<> - контрвариантен Action<IAnimal> actionAnimal = (cat) => {
+ Console.WriteLine("работает");
+};
+Action<Cat> actionCat = actionAnimal;
+actionCat(new Cat());
+```
+
+К каким коллизиям приводит метод Add в List:
+
+```C#
+// это компилируется и работает
+
+List<Cat> cats = new List<Cat>();
+cats.Add(new Cat());
+List<Cat> animals = cats;
+animals.Add(new Cat());
+
+foreach (var cat in cats) {
+    cat.Meow(); // в cats 2 кошки
+}
+
+
+// это НЕ КОМПИЛИРУЕТСЯ
+
+List<Cat> cats = new List<Cat>();
+cats.Add(new Cat());
+List<IAnimal> animals = cats;
+animals.Add(new Dog()); // это не порядок, потому что:
+
+// перебираем
+foreach (var cat in cats) {
+    cat.Meow(); // в cats 1 кошка и 1 собака, у собаки нет метода Meow()
+}
+```
+
+---
+
+## #38
 
 ---
